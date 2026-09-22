@@ -1,0 +1,490 @@
+/*
+ * Modern Dark — a pure-CSS dark theme for Redmine 7.x
+ * https://github.com/  (fill in once published)
+ *
+ * No JS, no build step, no dependencies besides the self-hosted JetBrains
+ * Mono font in ../fonts/. Every colour used anywhere below is either one of
+ * the tokens defined in the :root block right after the @import, or a Redmine
+ * core `--oc-*` variable that this file redefines in the same block. To
+ * re-skin: change --hue-n / --hue-a (and the handful of per-family hues just
+ * below them) and everything derives from there.
+ *
+ * Structure:
+ *   1. @import core stylesheet (MUST stay the first statement — see below)
+ *   2. Design tokens + the --oc-* (Open Color) bridge that remaps every
+ *      colour token Redmine's own CSS reads
+ *   3. @font-face (JetBrains Mono, self-hosted)
+ *   4. Global resets (color-scheme, fonts, selection, scrollbar, focus ring)
+ *   5. Chrome (top bar, header, main menu, sidebar text that isn't var-driven)
+ *   6. "Stays bright" text/icon pins — selectors that sit on a solid accent
+ *      fill and need guaranteed light text, now that --oc-white means "dark
+ *      surface" everywhere else
+ *   7. Gantt fixes (inline styles + a couple of role conflicts)
+ *   8. Small legacy icon visibility fixes (background-image icons that are
+ *      drawn dark and can't take a CSS colour)
+ *   9. jQuery UI (dialogs, datepicker fallback, tooltip, autocomplete) — a
+ *      separate un-themed stylesheet, needs its own colours
+ *  10. Rouge syntax highlighting (.syntaxhl) — pure hex in core, needs a
+ *      full override
+ *  11. Chart.js canvases — best-effort, CSS can't reach canvas pixels
+ */
+
+/* 1. Core stylesheet. Must be the very first statement (only comments may
+   precede an @import) or the browser drops it. */
+@import url(/application.css);
+
+/* ==========================================================================
+   2. Design tokens + Open Color bridge
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+
+  /* ---- knobs: change these two to re-hue the whole theme ---- */
+  --hue-n: 262;   /* neutral surface/text tint */
+  --hue-a: 265;   /* accent (links, buttons, selected states) */
+
+  /* ---- fonts ---- */
+  --font-ui: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+  --font-mono: var(--font-ui);
+  --font-size-base: 0.8125rem;
+  --font-ligatures: none; /* flipped to normal in code blocks, section 10 */
+
+  /* ---- neutral surface ladder (oklch, hue-n) ---- */
+  --bg-sunken:  oklch(0.150 0.010 var(--hue-n));
+  --bg-page:    oklch(0.180 0.012 var(--hue-n));
+  --bg-panel:   oklch(0.210 0.013 var(--hue-n));
+  --bg-surface: oklch(0.240 0.014 var(--hue-n));
+  --bg-raised:  oklch(0.275 0.015 var(--hue-n));
+  --bg-active:  oklch(0.310 0.016 var(--hue-n));
+
+  --border-subtle: oklch(0.300 0.015 var(--hue-n));
+  --border:         oklch(0.360 0.016 var(--hue-n));
+  --border-strong:  oklch(0.500 0.018 var(--hue-n));
+
+  --text-primary:   oklch(0.945 0.006 var(--hue-n));
+  --text-secondary: oklch(0.800 0.010 var(--hue-n));
+  --text-muted:     oklch(0.700 0.012 var(--hue-n));
+  --text-disabled:  oklch(0.540 0.012 var(--hue-n));
+
+  /* text/icon colour guaranteed to read on any solid accent/semantic fill */
+  --on-solid: oklch(0.97 0.004 var(--hue-n));
+
+  /* ---- accent (blue-indigo) ---- */
+  --accent-solid: oklch(0.53 0.18 var(--hue-a));
+  --accent-hover: oklch(0.57 0.18 var(--hue-a));
+  --accent-press: oklch(0.48 0.18 var(--hue-a));
+  --accent-fg:     oklch(0.77 0.115 var(--hue-a));
+  --accent-fg-dim: oklch(0.68 0.10 var(--hue-a));
+  --focus-ring:    oklch(0.70 0.15 var(--hue-a));
+  --accent-subtle: color-mix(in oklab, var(--accent-fg) 14%, transparent);
+  --accent-border: color-mix(in oklab, var(--accent-fg) 35%, transparent);
+
+  /* ---- semantic (danger/success/warning/info), for anything beyond the
+     raw --oc-* bridge that wants a named colour ---- */
+  --danger-fg: oklch(0.75 0.15 25);
+  --success-fg: oklch(0.78 0.15 150);
+  --warning-fg: oklch(0.82 0.14 85);
+  --info-fg: oklch(0.78 0.11 205);
+
+  /* ---- code / syntax-highlighting palette (section 10) ---- */
+  --code-fg: #d5d8dd;
+  --code-comment: #7f8a9c;
+  --code-keyword: #be9df7;
+  --code-string: #86d489;
+  --code-number: #faa365;
+  --code-function: #80bdfb;
+  --code-type: #65d2d2;
+  --code-variable: #fe9aa2;
+  --code-operator: #aaaeb6;
+  --code-attribute: #e6c465;
+
+  /* ---- core's own semantic vars (top bar / header background, selected
+     main-menu underline, base font) — repointed at our own tokens instead
+     of the legacy static navy so the whole chrome stays one cohesive
+     dark-neutral system with the accent used only for interactive bits ---- */
+  --fonts-main: var(--font-ui);
+  --color-current-marker: var(--accent-solid);
+  --color-top-menu-background: var(--bg-sunken);
+  --color-header-background: var(--bg-panel);
+
+  /* ==========================================================================
+     Open Color bridge — every --oc-* token Redmine's core CSS reads.
+     Generated from the palette above via a per-role OKLCH formula (tint /
+     border / solid-fill / fg-text per hue family) and contrast-verified
+     (white-on-solid >= 4.5:1, fg-text-on-surface >= 4.5:1) rather than
+     hand-picked. See the theme README for the full per-token role table.
+     ========================================================================== */
+  --oc-black: #000000;
+  --oc-black-rgb: 0, 0, 0;
+  --oc-white: var(--bg-surface);
+  --oc-white-rgb: 28, 31, 38;
+
+  --oc-gray-0: var(--bg-panel);
+  --oc-gray-1: var(--bg-sunken);
+  --oc-gray-2: var(--bg-sunken);
+  --oc-gray-3: var(--border-subtle);
+  --oc-gray-4: var(--border);
+  --oc-gray-5: var(--text-muted);
+  --oc-gray-6: var(--text-muted);
+  --oc-gray-7: var(--text-secondary);
+  --oc-gray-8: var(--text-primary);
+  --oc-gray-9: var(--text-primary);
+  --oc-gray-9-rgb: 9, 11, 15;
+
+  --oc-blue-0: #111b31;
+  --oc-blue-1: #111b31;
+  --oc-blue-1-rgb: 17, 27, 49;
+  --oc-blue-2: #314675;
+  --oc-blue-5: #314675;
+  --oc-blue-6: var(--accent-fg-dim);
+  --oc-blue-7: var(--accent-solid);
+  --oc-blue-7-rgb: 55, 98, 210;
+  --oc-blue-8: #314675;
+  --oc-blue-9: var(--accent-fg);
+
+  --oc-indigo-0: #0e1c31;
+  --oc-indigo-1: #0e1c31;
+  --oc-indigo-2: #0e1c31;
+  --oc-indigo-5: #2567cc;
+  --oc-indigo-7: #2a4775;
+  --oc-indigo-9: #8cb9fe;
+
+  --oc-red-1: #2e1211;
+  --oc-red-2: #2e1211;
+  --oc-red-3: #7a3430;
+  --oc-red-4: #2e1211;
+  --oc-red-5: #cc3336;
+  --oc-red-7: #cc3336;
+  --oc-red-8: #7a3430;
+  --oc-red-9: var(--danger-fg);
+
+  --oc-pink-2: #703559;
+  --oc-pink-5: #a83c81;
+  --oc-pink-9: #f294ca;
+
+  --oc-green-1: #0d2111;
+  --oc-green-2: #0d2111;
+  --oc-green-3: #255a33;
+  --oc-green-4: #0a7e3a;
+  --oc-green-7: #0a7e3a;
+  --oc-green-8: var(--success-fg);
+  --oc-green-9: var(--success-fg);
+
+  --oc-yellow-0: #241a04;
+  --oc-yellow-1: #241a04;
+  --oc-yellow-2: #241a04;
+  --oc-yellow-3: #634800;
+  --oc-yellow-4: #eebc4a;
+  --oc-yellow-7: #816000;
+  --oc-yellow-8: var(--warning-fg);
+  --oc-yellow-9: var(--warning-fg);
+
+  --oc-orange-1: #2c1505;
+  --oc-orange-2: #753b07;
+  --oc-orange-6: #a45300;
+  --oc-orange-7: #753b07;
+  --oc-orange-9: #ffa566;
+
+  --oc-cyan-1: #005860;
+  --oc-cyan-6: #00717a;
+  --oc-cyan-7: #00717a;
+
+  --oc-grape-2: #5d3d73;
+  --oc-grape-7: #8e51b6;
+  --oc-grape-9: #d19ff5;
+
+  --oc-violet-0: #1c172f;
+  --oc-violet-1: #1c172f;
+  --oc-violet-3: #4f437a;
+
+  --oc-lime-2: #475411;
+}
+
+/* ==========================================================================
+   3. Self-hosted JetBrains Mono (OFL-1.1, see LICENSE-JetBrainsMono.txt)
+   ========================================================================== */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/JetBrainsMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/JetBrainsMono-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/JetBrainsMono-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/JetBrainsMono-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/JetBrainsMono-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
+   4. Global resets
+   ========================================================================== */
+body, input, select, textarea, button {
+  font-family: var(--font-ui);
+  font-variant-ligatures: var(--font-ligatures);
+  font-size: var(--font-size-base);
+}
+pre, code, .syntaxhl, div.wiki pre, div.wiki code {
+  font-variant-ligatures: normal;
+}
+h1, h2, h3, h4, h5, h6 { font-weight: 600; }
+
+::selection { background: color-mix(in oklab, var(--accent-solid) 45%, transparent); color: var(--on-solid); }
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--bg-page); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; border: 3px solid var(--bg-page); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+html { scrollbar-color: var(--border-strong) var(--bg-page); scrollbar-width: thin; }
+
+:root { accent-color: var(--accent-solid); }
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* ==========================================================================
+   5. Chrome — top bar / header text that sits on a background we've
+   repointed away from Open Color's gray-1/gray-2/white (which now mean
+   "dark UI surface", not "light text"), so these must be pinned explicitly.
+   ========================================================================== */
+nav.top-menu { color: var(--text-secondary); }
+.top-menu__links a, .top-menu__links a:link, .top-menu__links a:visited,
+#account .dropdown-trigger {
+  color: var(--text-secondary);
+}
+.top-menu__links a:hover, #account .dropdown-trigger:hover {
+  color: var(--text-primary);
+}
+.top-menu__links svg.icon-svg, #account .dropdown-trigger .icon-svg {
+  stroke: var(--text-secondary);
+}
+.top-menu__links a:hover svg.icon-svg, #account .dropdown-trigger:hover .icon-svg {
+  stroke: var(--text-primary);
+}
+#account .dropdown-content .user-info { color: var(--text-primary); }
+
+#header { color: var(--text-primary); }
+#header a { color: var(--text-secondary); }
+#header a:hover { color: var(--text-primary); }
+
+/* literal (non-variable) "white" hardcodes in core — these can't be fixed
+   by the --oc-* bridge since they don't reference a variable at all */
+#wrapper { background: var(--bg-page); }
+div#sticky-issue-header { background-color: var(--bg-panel); }
+div.tabs-buttons { background: var(--bg-surface); }
+#context-menu ul { background: var(--bg-surface); }
+/* jstoolbar.js appends this grid picker straight to <body>, not inside
+   .jstElements, so the selector can't be scoped to the toolbar */
+.table-generator td { background-color: var(--bg-surface); }
+#progress-label { text-shadow: 1px 1px 0 var(--bg-sunken); }
+
+@media screen and (max-width: 899px) {
+  #project-jump .drdn-trigger { color: var(--text-primary); }
+  /* core resets this to gray-0 (now a dark surface) for mobile only; the
+     button sits on --color-header-background, which we also darkened */
+  #header a.mobile-toggle-button { color: var(--text-primary); }
+}
+
+/* ==========================================================================
+   6. "Stays bright" pins — text/icon colour on a solid accent (or other
+   solid semantic) fill. --oc-white now means "dark surface" for every
+   other use, so these specific selectors need their own light value.
+   ========================================================================== */
+#main-menu .menu-children li a:hover,
+.tribute-container li.highlight,
+.cal .calbody.today .day-value,
+.badge-private,
+.badge-count,
+.avatar-color-0, .avatar-color-1, .avatar-color-3, .avatar-color-4,
+.avatar-color-5, .avatar-color-6, .avatar-color-7 {
+  color: var(--on-solid);
+}
+#project-jump .drdn-items > a:hover { color: var(--on-solid) !important; }
+.context-menu-selection,
+.context-menu-selection a, .context-menu-selection a:hover,
+.context-menu-selection:hover {
+  color: var(--on-solid) !important;
+}
+.context-menu-selection svg.icon-svg { stroke: var(--on-solid) !important; }
+li.change.change-A svg.icon-svg, li.change.change-M svg.icon-svg,
+li.change.change-C svg.icon-svg, li.change.change-R svg.icon-svg,
+li.change.change-D svg.icon-svg {
+  stroke: var(--on-solid);
+}
+
+/* ==========================================================================
+   7. Gantt — inline styles and a couple of role conflicts the generic
+   bridge can't resolve on its own.
+   ========================================================================== */
+.version.task_todo, .project.task_todo {
+  background-color: var(--border-strong) !important;
+  border-color: var(--border-strong) !important;
+}
+.version-overdue a, .issue-overdue a, .project-overdue a {
+  color: var(--oc-red-9);
+}
+#today_line { border-inline-start-color: var(--oc-red-9) !important; }
+/* relation lines are drawn with a literal stroke= SVG attribute; recolour
+   by value in case the fallback attribute survives into the rendered DOM */
+path[stroke="#fa5252"] { stroke: var(--oc-red-9) !important; }
+path[stroke="#228be6"] { stroke: var(--oc-blue-9) !important; }
+
+/* ==========================================================================
+   8. Legacy icon visibility — a handful of small background-image icons
+   are drawn as dark glyphs (currentColor resolves to black in a CSS
+   background-image, or a dark-pixel PNG) and can't take a CSS colour.
+   A small light halo behind each keeps the glyph itself visible on our
+   dark surfaces without needing to redraw or invert the actual asset.
+   ========================================================================== */
+input.autocomplete {
+  background-image: url(/search.svg), radial-gradient(circle 8px at 10px 50%, var(--on-solid) 55%, transparent 60%);
+}
+em.info.error {
+  background-image: url(/exclamation.png), radial-gradient(circle 7px at 8px 50%, var(--on-solid) 55%, transparent 60%);
+}
+div.wiki .external {
+  background-image: url(/external.png), radial-gradient(circle 7px at 6px 60%, var(--on-solid) 55%, transparent 60%);
+}
+#project-jump .drdn.expanded .drdn-trigger {
+  background-image: url(/arrow_up.png), radial-gradient(circle 8px at calc(100% - 12px) 50%, var(--on-solid) 55%, transparent 60%);
+}
+
+/* ==========================================================================
+   9. jQuery UI — dialogs, datepicker fallback, tooltip, autocomplete. This
+   ships as one pre-minified stylesheet with its own pure-hex palette,
+   entirely outside Open Color, so it needs its own override block.
+   ========================================================================== */
+.ui-widget-content {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+.ui-widget-header {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+.ui-widget-content a, .ui-widget-header a { color: var(--accent-fg); }
+.ui-button, .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+/* jQuery UI also colours <a> tags nested directly inside these state
+   classes (e.g. a.ui-button, datepicker nav links) — same specificity
+   trick core uses, so ours has to match it or the anchor's own hex wins */
+.ui-state-default a, a.ui-button { color: var(--text-primary); }
+.ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover,
+.ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus {
+  background: var(--bg-active);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.ui-state-hover a, .ui-state-focus a { color: var(--text-primary); }
+.ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active,
+.ui-menu-item.ui-state-active, .ui-menu-item .ui-state-active {
+  background: var(--accent-solid) !important;
+  color: var(--on-solid) !important;
+  border-color: var(--accent-solid);
+}
+.ui-state-highlight, .ui-widget-content .ui-state-highlight, .ui-widget-header .ui-state-highlight,
+.ui-state-checked {
+  background: var(--accent-subtle);
+  border-color: var(--accent-border);
+  color: var(--text-primary);
+}
+.ui-state-highlight a { color: var(--text-primary); }
+.ui-state-error, .ui-widget-content .ui-state-error, .ui-widget-header .ui-state-error,
+.ui-state-error-text {
+  background: color-mix(in oklab, var(--oc-red-9) 12%, var(--bg-surface));
+  border-color: var(--oc-red-8);
+  color: var(--oc-red-9);
+}
+.ui-state-error a { color: var(--oc-red-9); }
+.ui-tooltip { background: var(--bg-panel); color: var(--text-primary); border: 1px solid var(--border); }
+.ui-datepicker { background: var(--bg-surface); border: 1px solid var(--border); }
+.ui-datepicker-header { background: var(--bg-panel); color: var(--text-primary); }
+.ui-datepicker td a, .ui-datepicker td span { color: var(--text-primary); }
+.ui-datepicker .ui-datepicker-today a { background: var(--accent-subtle); }
+.ui-icon { background-image: none !important; }
+.ui-selectable-helper { border-color: var(--accent-fg); }
+
+.ui-autocomplete, .ui-menu { background: var(--bg-surface); border-color: var(--border); }
+.ui-menu-item > div { color: var(--text-primary); }
+
+/* ==========================================================================
+   10. Rouge syntax highlighting (.syntaxhl) — core ships a fixed "colorful"
+   pygments-style hex palette with light pink/grey string & interpolation
+   chips, unrelated to Open Color. Full override using the code-* tokens.
+   ========================================================================== */
+.syntaxhl { background: var(--bg-sunken); color: var(--code-fg); }
+.syntaxhl .hll { background-color: var(--accent-subtle); }
+.syntaxhl .err { color: var(--on-solid); background-color: color-mix(in oklab, var(--oc-red-9) 55%, transparent); }
+
+.syntaxhl .c, .syntaxhl .ch, .syntaxhl .cm, .syntaxhl .cp, .syntaxhl .cpf,
+.syntaxhl .c1, .syntaxhl .go, .syntaxhl .sd { color: var(--code-comment); }
+.syntaxhl .cs { color: var(--oc-red-9); font-weight: bold; }
+
+.syntaxhl .k, .syntaxhl .kc, .syntaxhl .kd, .syntaxhl .kn, .syntaxhl .kp,
+.syntaxhl .kr, .syntaxhl .ow, .syntaxhl .gu { color: var(--code-keyword); font-weight: bold; }
+.syntaxhl .kt { color: var(--code-type); font-weight: bold; }
+
+.syntaxhl .o, .syntaxhl .p, .syntaxhl .w { color: var(--code-operator); }
+
+.syntaxhl .m, .syntaxhl .mb, .syntaxhl .mf, .syntaxhl .mh, .syntaxhl .mi,
+.syntaxhl .mo, .syntaxhl .il, .syntaxhl .no, .syntaxhl .gp { color: var(--code-number); font-weight: bold; }
+
+.syntaxhl .s, .syntaxhl .sa, .syntaxhl .sb, .syntaxhl .dl, .syntaxhl .s2,
+.syntaxhl .sh, .syntaxhl .si, .syntaxhl .sr, .syntaxhl .s1, .syntaxhl .sx,
+.syntaxhl .sc, .syntaxhl .ss, .syntaxhl .se {
+  color: var(--code-string);
+  background-color: color-mix(in oklab, var(--code-string) 10%, transparent);
+}
+
+.syntaxhl .na { color: var(--code-attribute); }
+.syntaxhl .nb, .syntaxhl .bp { color: var(--code-type); }
+.syntaxhl .nc { color: var(--code-type); font-weight: bold; }
+.syntaxhl .nd { color: var(--code-attribute); font-weight: bold; }
+.syntaxhl .ni, .syntaxhl .ne, .syntaxhl .gr, .syntaxhl .gd { color: var(--oc-red-9); font-weight: bold; }
+.syntaxhl .nf, .syntaxhl .fm, .syntaxhl .nn, .syntaxhl .gh, .syntaxhl .gt { color: var(--code-function); font-weight: bold; }
+.syntaxhl .nl { color: var(--code-attribute); font-weight: bold; }
+.syntaxhl .nt { color: var(--oc-red-9); }
+.syntaxhl .nv, .syntaxhl .vc, .syntaxhl .vg, .syntaxhl .vi, .syntaxhl .vm { color: var(--code-variable); }
+.syntaxhl .gi { color: var(--code-string); }
+.syntaxhl .ge { font-style: italic; }
+.syntaxhl .gs { font-weight: bold; }
+
+div.wiki pre .syntaxhl { background: var(--bg-sunken); }
+
+/* ==========================================================================
+   11. Chart.js canvases (reports, repository stats) — hard-coded rgba()
+   colours in JS, CSS can't reach canvas pixels. A gentle invert keeps them
+   legible against a dark page without turning them illegibly neon.
+   ========================================================================== */
+canvas { filter: invert(0.88) hue-rotate(180deg); }
