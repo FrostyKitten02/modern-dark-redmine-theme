@@ -111,6 +111,27 @@ explicitly overrides:
 - Scrollbar, text selection, focus ring, native form control colours
   (`color-scheme: dark`, `accent-color`).
 
+## Plugin support
+
+Redmine core is fully covered by `application.css`'s token bridge, but
+plugins ship their own separate, un-themed stylesheets with their own
+hard-coded colours. Each plugin this theme has overrides for gets its own
+file (`stylesheets/<plugin>.css`), imported from `application.css` — safe to
+leave imported even if you don't have that plugin installed (an `@import` of
+a missing file is just ignored by the browser). Currently covered:
+
+- **[RedmineUP Agile](https://www.redmineup.com/pages/plugins/agile)**
+  (`stylesheets/redmine_agile.css`, audited against v1.7.0) — the Kanban
+  board, planning/backlog board, issue cards, WIP-limit indicators, and the
+  opt-in card colour-coding (`.bk-*`) all had hard-coded light-theme colours;
+  all re-themed. The `.br-*` border-only colour-coding uses plain CSS colour
+  keywords (red/green/blue/...) and reads fine on a dark card as-is, so it's
+  left untouched. Not covered: the bulk-edit colour picker widget
+  (`jquery.simplecolorpicker.css`) — low-traffic, low-impact, not yet themed.
+
+Got a plugin with the same problem? Give me its zip (or repo link, if public)
+and I'll do the same pass for it.
+
 ## Known limitations (please report what you see)
 
 - **Chart.js canvases** (Reports, repository statistics) draw with
@@ -132,8 +153,11 @@ explicitly overrides:
   handful of hard-coded Rouge colours on that one page may not match.
 - **User-authored wiki/Markdown content** can set arbitrary inline
   `color`/`background-color` — no theme can safely override user content.
-- Tested against source only, not a live instance (by agreement — see
-  below). Please install and report anything that looks wrong.
+- **`jquery.simplecolorpicker.css`** (RedmineUP Agile's bulk-edit colour
+  picker) is not yet themed — see Plugin support above.
+- Built and reviewed against real Redmine/plugin source, not by clicking
+  through a live instance myself. Please install and report anything that
+  looks wrong — that's how the fixes so far were found.
 
 ## Testing checklist
 
@@ -149,6 +173,8 @@ path to fixing it:
 - Admin pages (incl. workflow transitions, field permissions), login
 - Modals, datepicker, autocomplete, flash messages, user dropdown
 - Mobile width (≤899px / ≤599px)
+- If you have RedmineUP Agile: Kanban board, fullscreen mode, planning/
+  backlog board, WIP-limit columns, card colour-coding (`.bk-*`)
 
 ## Requirements
 

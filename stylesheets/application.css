@@ -9,6 +9,11 @@
  * re-skin: change --hue-n / --hue-a (and the handful of per-family hues just
  * below them) and everything derives from there.
  *
+ * Third-party plugin support lives in its own file per plugin (e.g.
+ * redmine_agile.css), imported below core and read against the same tokens
+ * defined here — see that file's own header for why it needs !important
+ * throughout.
+ *
  * Structure:
  *   1. @import core stylesheet (MUST stay the first statement — see below)
  *   2. Design tokens + the --oc-* (Open Color) bridge that remaps every
@@ -29,9 +34,16 @@
  *  11. Chart.js canvases — best-effort, CSS can't reach canvas pixels
  */
 
-/* 1. Core stylesheet. Must be the very first statement (only comments may
-   precede an @import) or the browser drops it. */
+/* 1. Core stylesheet, plus any installed-plugin override files. All @import
+   statements must stay consecutive at the top (only comments may precede
+   the first one, and nothing but another @import may come between them) or
+   the browser drops whichever one comes after a non-import rule. */
 @import url(/application.css);
+
+/* Optional per-plugin override files — safe to import even when the plugin
+   isn't installed (an @import of a missing file is simply ignored). Add one
+   line here per plugin this theme has overrides for. */
+@import url(redmine_agile.css); /* https://www.redmineup.com/pages/plugins/agile */
 
 /* ==========================================================================
    2. Design tokens + Open Color bridge
