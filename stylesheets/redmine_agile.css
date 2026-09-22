@@ -1,0 +1,153 @@
+/*
+ * Modern Dark — overrides for the RedmineUP "Agile" plugin
+ * https://www.redmineup.com/pages/plugins/agile
+ *
+ * Kept separate from application.css so it's obviously attributable to (and
+ * removable with) this one plugin. Audited against redmine_agile v1.7.0's
+ * assets/stylesheets/redmine_agile.css — a plain hand-written stylesheet
+ * with no variables of its own, so every rule below just redirects one of
+ * its hard-coded colours at a token already defined in application.css.
+ *
+ * Every declaration here needs !important: the plugin loads its own CSS via
+ * a view_layouts_base_html_head hook (lib/redmine_agile/hooks/views_layouts_hook.rb),
+ * which core renders into <head> AFTER application.css — so at equal
+ * specificity the plugin's own same-selector rule would otherwise win the
+ * cascade and silently undo these overrides.
+ *
+ * Loaded via `@import url(redmine_agile.css);` in application.css, since
+ * Redmine's theme loader has no hook to auto-load an extra stylesheet. The
+ * plugin itself requests its CSS with `plugin: 'redmine_agile'`, a distinct
+ * asset path from theme-substitutable core files, so this filename can't
+ * collide with or replace the plugin's own stylesheet.
+ */
+
+/* ---- literal white/near-white surfaces (the reported bug: white board
+   and cards on a dark page) ---- */
+.issue-card,
+.issues-board td.issue-status-col.closed .issue-card,
+.issue-card div.quick-edit-card,
+.issue-card p.project {
+  background-color: var(--bg-raised) !important;
+}
+table.list.issues-board tbody tr,
+table.list.issues-board tbody tr:hover,
+table.list.versions-planning-board tbody tr,
+table.list.versions-planning-board tbody tr:hover {
+  background-color: var(--bg-surface) !important;
+}
+html.agile-board-fullscreen div.agile-board { background: var(--bg-page) !important; }
+table.issues-board td.issue-status-col.closed { background-color: var(--bg-panel) !important; }
+
+/* planning/backlog board columns */
+.planning-board .column-content { background-color: var(--bg-panel) !important; border-color: var(--border) !important; }
+.planning-board .column-header { background-color: var(--bg-sunken) !important; border-color: var(--border) !important; }
+.planning-board .closed-issue { background-color: var(--bg-panel) !important; border-color: var(--border) !important; }
+.issues-board .backlog-column-header,
+.issues-board .issue-backlog-col { background: var(--accent-subtle) !important; }
+
+/* ---- borders/dividers: consistent role throughout, safe blanket remap ---- */
+.issue-card,
+.issue-card p.project,
+.issue-card .info,
+.issue-card div.sub-issues,
+.issue-card div.checklist,
+.issue-card div.quick-edit-card,
+table.issues-board,
+table.issues-board tr.group.swimlane td,
+.ws-actors-wrapper {
+  border-color: var(--border) !important;
+}
+
+/* ---- muted text: consistent role throughout ---- */
+.issue-card:not(.context-menu-selection) .attributes,
+.issue-card:not(.context-menu-selection) span.hours,
+.issue-card li.task-closed,
+.planning-board .column-header .version-name,
+.planning-board .closed-issue,
+.planning-board .closed-issue p.name a,
+.planning-board .closed-issue p.issue-id,
+table.list thead tr th span.hours {
+  color: var(--text-muted) !important;
+}
+
+/* selected card: p.project keeps its own bg (now dark), so the forced
+   black text from the plugin's own rule needs to go back to readable */
+.issue-card.context-menu-selection p.project { color: var(--text-primary) !important; }
+
+/* ---- work-in-progress limit indicators ---- */
+table.issues-board thead th span.count span.under_wp_limit,
+.planning-board .under_wp_limit { color: var(--success-fg) !important; }
+table.issues-board thead th span.count span.over_wp_limit,
+.planning-board .over_wp_limit { color: var(--danger-fg) !important; }
+table.issues-board thead th.under_wp_limit {
+  background-color: color-mix(in oklab, var(--success-fg) 16%, transparent) !important;
+}
+table.issues-board thead th.over_wp_limit {
+  background-color: color-mix(in oklab, var(--danger-fg) 16%, transparent) !important;
+}
+table.issues-board tbody td.under_wp_limit {
+  background-color: color-mix(in oklab, var(--success-fg) 8%, transparent) !important;
+}
+table.issues-board tbody td.over_wp_limit {
+  background-color: color-mix(in oklab, var(--danger-fg) 8%, transparent) !important;
+}
+.issues-board td.issue-status-col.droppable-hover,
+.issues-board td.issue-status-col .issue-card.droppable-hover {
+  background-color: var(--accent-subtle) !important;
+}
+
+/* ---- opt-in card colour-coding (.bk-*): darken each pastel while keeping
+   its hue, rather than hand-picking 9 replacement colours ---- */
+.issue-card.bk-red,
+table.list.issues tr.issue:not(.context-menu-selection).bk-red td.id a {
+  background-color: color-mix(in srgb, #FFE2E3 30%, var(--bg-surface)) !important;
+}
+.issue-card.bk-green,
+table.list.issues tr.issue:not(.context-menu-selection).bk-green td.id a {
+  background-color: color-mix(in srgb, #DFFFCC 30%, var(--bg-surface)) !important;
+}
+.issue-card.bk-blue,
+table.list.issues tr.issue:not(.context-menu-selection).bk-blue td.id a {
+  background-color: color-mix(in srgb, #DCE7FF 30%, var(--bg-surface)) !important;
+}
+.issue-card.bk-turquoise,
+table.list.issues tr.issue:not(.context-menu-selection).bk-turquoise td.id a {
+  background-color: color-mix(in srgb, #C4FDFF 30%, var(--bg-surface)) !important;
+}
+.issue-card.bk-lightgreen,
+table.list.issues tr.issue:not(.context-menu-selection).bk-lightgreen td.id a {
+  background-color: color-mix(in srgb, #D2FFEF 30%, var(--bg-surface)) !important;
+}
+.issue-card.bk-yellow,
+table.list.issues tr.issue:not(.context-menu-selection).bk-yellow td.id a {
+  background-color: color-mix(in srgb, #FFFD9C 30%, var(--bg-surface)) !important;
+}
+.issue-card.bk-orange,
+table.list.issues tr.issue:not(.context-menu-selection).bk-orange td.id a {
+  background-color: color-mix(in srgb, #FFDBBA 30%, var(--bg-surface)) !important;
+}
+.issue-card.bk-purple,
+table.list.issues tr.issue:not(.context-menu-selection).bk-purple td.id a {
+  background-color: color-mix(in srgb, #EFDFFC 30%, var(--bg-surface)) !important;
+}
+.issue-card.bk-gray,
+table.list.issues tr.issue:not(.context-menu-selection).bk-gray td.id a {
+  background-color: color-mix(in srgb, #e1e1e1 30%, var(--bg-surface)) !important;
+}
+.issue-card.bk-red, .issue-card.bk-green, .issue-card.bk-blue,
+.issue-card.bk-turquoise, .issue-card.bk-lightgreen, .issue-card.bk-yellow,
+.issue-card.bk-orange, .issue-card.bk-purple, .issue-card.bk-gray,
+table.list.issues tr.issue.bk-red td.id a, table.list.issues tr.issue.bk-green td.id a,
+table.list.issues tr.issue.bk-blue td.id a, table.list.issues tr.issue.bk-turquoise td.id a,
+table.list.issues tr.issue.bk-lightgreen td.id a, table.list.issues tr.issue.bk-yellow td.id a,
+table.list.issues tr.issue.bk-orange td.id a, table.list.issues tr.issue.bk-purple td.id a,
+table.list.issues tr.issue.bk-gray td.id a {
+  border-color: var(--border) !important;
+}
+/* .br-* (border-only colour coding) uses plain CSS colour keywords
+   (red/green/blue/...) — those read fine on a dark card as-is */
+
+/* ---- misc ---- */
+.ws-actors-wrapper {
+  background-color: color-mix(in oklab, var(--success-fg) 22%, var(--bg-raised)) !important;
+}
